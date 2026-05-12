@@ -24,7 +24,7 @@ import type {
   Finding,
 } from './spec.js';
 
-import { isValidColor, isParseableDimension, isTokenReference, parseDimensionParts } from './spec.js';
+import { tryParseDimension, isTokenReference } from './spec.js';
 import { parseCssColor } from './color-parser.js';
 
 const MAX_REFERENCE_DEPTH = 10;
@@ -52,18 +52,21 @@ export class ModelHandler implements ModelSpec {
           if (isTokenReference(raw)) {
             // Store raw reference for later resolution
             symbolTable.set(`colors.${name}`, raw);
-          } else if (isValidColor(raw)) {
-            const resolved = parseColor(raw);
-            colors.set(name, resolved);
-            symbolTable.set(`colors.${name}`, resolved);
           } else {
-            findings.push({
-              severity: 'error',
-              path: `colors.${name}`,
-              message: `'${raw}' is not a valid color. Expected a hex color code (e.g., #ffffff).`,
-            });
-            // Store as-is for fallback
-            symbolTable.set(`colors.${name}`, raw);
+            const parsed = parseCssColor(raw);
+            if (parsed !== null) {
+              const resolved: ResolvedColor = { type: 'color', ...parsed };
+              colors.set(name, resolved);
+              symbolTable.set(`colors.${name}`, resolved);
+            } else {
+              findings.push({
+                severity: 'error',
+                path: `colors.${name}`,
+                message: `'${raw}' is not a valid color. Expected a hex color code (e.g., #ffffff).`,
+              });
+              // Store as-is for fallback
+              symbolTable.set(`colors.${name}`, raw);
+            }
           }
         }
       }
@@ -81,8 +84,8 @@ export class ModelHandler implements ModelSpec {
       if (input.rounded) {
         for (const [name, raw] of Object.entries(input.rounded)) {
           if (typeof raw === 'string') {
-            if (isParseableDimension(raw)) {
-              const resolved = parseDimension(raw);
+            const resolved = tryParseDimension(raw);
+            if (resolved !== null) {
               if (resolved.unit !== 'px' && resolved.unit !== 'rem' && resolved.unit !== 'em') {
                 findings.push({
                   severity: 'error',
@@ -109,8 +112,8 @@ export class ModelHandler implements ModelSpec {
       // Spacing
       if (input.spacing) {
         for (const [name, raw] of Object.entries(input.spacing)) {
-          if (isParseableDimension(raw)) {
-            const resolved = parseDimension(raw);
+          const resolved = typeof raw === 'string' ? tryParseDimension(raw) : null;
+          if (resolved !== null) {
             spacing.set(name, resolved);
             symbolTable.set(`spacing.${name}`, resolved);
           } else {
@@ -192,12 +195,18 @@ export class ModelHandler implements ModelSpec {
                 unresolvedRefs.push(rawValue);
                 properties.set(propName, rawValue);
               }
-            } else if (isValidColor(rawValue)) {
-              properties.set(propName, parseColor(rawValue));
-            } else if (isParseableDimension(rawValue)) {
-              properties.set(propName, parseDimension(rawValue));
             } else {
-              properties.set(propName, rawValue);
+              const parsedColor = parseCssColor(rawValue);
+              if (parsedColor !== null) {
+                properties.set(propName, { type: 'color', ...parsedColor });
+              } else {
+                const parsedDim = tryParseDimension(rawValue);
+                if (parsedDim !== null) {
+                  properties.set(propName, parsedDim);
+                } else {
+                  properties.set(propName, rawValue);
+                }
+              }
             }
           }
 
@@ -244,35 +253,6 @@ export class ModelHandler implements ModelSpec {
 // ── Pure utility functions ─────────────────────────────────────────
 
 /**
- * Parse a CSS color string into a ResolvedColor with RGB + WCAG luminance.
- */
-export function parseColor(raw: string): ResolvedColor {
-  const parsed = parseCssColor(raw);
-  if (!parsed) {
-    throw new Error(`Invalid color: ${raw}`);
-  }
-  return {
-    type: 'color',
-    ...parsed,
-  };
-}
-
-/**
- * Parse a dimension string like "42px" or "1.5rem".
- */
-function parseDimension(raw: string): ResolvedDimension {
-  const parts = parseDimensionParts(raw);
-  if (!parts) {
-    throw new Error(`Invalid dimension: ${raw}`);
-  }
-  return {
-    type: 'dimension',
-    value: parts.value,
-    unit: parts.unit,
-  };
-}
-
-/**
  * Parse a typography properties object into a ResolvedTypography.
  */
 function parseTypography(props: Record<string, string | number>, path: string, findings: Finding[]): ResolvedTypography {
@@ -280,7 +260,7 @@ function parseTypography(props: Record<string, string | number>, path: string, f
 
   if (typeof props['fontFamily'] === 'string') {
     const ff = props['fontFamily'];
-    if (isValidColor(ff)) {
+    if (parseCssColor(ff) !== null) {
       findings.push({
         severity: 'error',
         path: `${path}.fontFamily`,
@@ -319,8 +299,8 @@ function parseTypography(props: Record<string, string | number>, path: string, f
   for (const prop of dimensionProps) {
     const raw = props[prop];
     if (typeof raw === 'string') {
-      if (isParseableDimension(raw)) {
-        const parsed = parseDimension(raw);
+      const parsed = tryParseDimension(raw);
+      if (parsed !== null) {
         if (parsed.unit !== 'px' && parsed.unit !== 'rem' && parsed.unit !== 'em') {
           findings.push({
             severity: 'error',

@@ -61,7 +61,7 @@ export interface ResolvedTypography {
   fontVariation?: string | undefined;
 }
 
-export type ResolvedValue = ResolvedColor | ResolvedDimension | ResolvedTypography | string;
+export type ResolvedValue = ResolvedColor | ResolvedDimension | ResolvedTypography | string | number;
 
 // ── Re-exported from spec-config (single source of truth) ─────────
 export const VALID_TYPOGRAPHY_PROPS = _VALID_TYPOGRAPHY_PROPS;
@@ -164,12 +164,27 @@ export function isStandardDimension(raw: string): boolean {
 }
 
 /**
+ * Try to parse a dimension string and return its structured representation if it uses a known unit.
+ * Combines check and parse to avoid redundant parsing work.
+ */
+export function tryParseDimension(raw: string): ResolvedDimension | null {
+  const parts = parseDimensionParts(raw);
+  if (parts !== null && CSS_UNITS.has(parts.unit)) {
+    return {
+      type: 'dimension',
+      value: parts.value,
+      unit: parts.unit,
+    };
+  }
+  return null;
+}
+
+/**
  * Check if a dimension string is parseable (any known CSS length/percentage unit).
  * Adding support for a new unit: add it to CSS_UNITS above.
  */
 export function isParseableDimension(raw: string): boolean {
-  const parts = parseDimensionParts(raw);
-  return parts !== null && CSS_UNITS.has(parts.unit);
+  return tryParseDimension(raw) !== null;
 }
 
 /**
