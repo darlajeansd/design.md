@@ -60,13 +60,28 @@ const MD3_STANDARD_FAMILIES = new Set([
 export function orphanedTokens(state: DesignSystemState): RuleFinding[] {
   if (state.components.size === 0) return [];
 
+  // Pre-compute reverse mapping from token value -> token path(s) to turn
+  // the O(n^2) nested search into an O(n) lookup.
+  const valueToPaths = new Map<unknown, string[]>();
+  for (const [key, symValue] of state.symbolTable) {
+    if (typeof symValue === 'object' && symValue !== null && 'type' in symValue) {
+      let paths = valueToPaths.get(symValue);
+      if (!paths) {
+        paths = [];
+        valueToPaths.set(symValue, paths);
+      }
+      paths.push(key);
+    }
+  }
+
   const referencedPaths = new Set<string>();
   for (const [, comp] of state.components) {
     for (const [, value] of comp.properties) {
       if (typeof value === 'object' && value !== null && 'type' in value) {
-        for (const [key, symValue] of state.symbolTable) {
-          if (symValue === value) {
-            referencedPaths.add(key);
+        const paths = valueToPaths.get(value);
+        if (paths) {
+          for (const path of paths) {
+            referencedPaths.add(path);
           }
         }
       }
