@@ -26,14 +26,17 @@ import type { Root, Code, Yaml, Heading, PhrasingContent } from 'mdast';
  * Never throws — all errors returned as ParserResult failures.
  */
 export class ParserHandler implements ParserSpec {
+  // ⚡ Bolt: Instantiating the unified processor pipeline once as a class property
+  // avoids the overhead of recreating it on every parse execution.
+  private processor = unified()
+    .use(remarkParse)
+    .use(remarkFrontmatter, ['yaml']);
+
   execute(input: ParserInput): ParserResult {
     try {
       const { content } = input;
-      const processor = unified()
-        .use(remarkParse)
-        .use(remarkFrontmatter, ['yaml']);
 
-      const ast = processor.parse(content) as Root;
+      const ast = this.processor.parse(content) as Root;
       const blocks: Array<{ yaml: string; block: 'frontmatter' | number; startLine: number }> = [];
       const sections: string[] = [];
       const headingsWithLines: Array<{ text: string; line: number }> = [];
