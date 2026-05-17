@@ -25,14 +25,18 @@ import type { Root, Code, Yaml, Heading, PhrasingContent } from 'mdast';
  * Supports two embedding modes: frontmatter (---) and fenced yaml code blocks.
  * Never throws — all errors returned as ParserResult failures.
  */
+// ⚡ Bolt Performance Optimization:
+// We instantiate the unified processor pipeline once as a module-level constant instead of
+// recreating it on every `execute()` call or class instantiation. This avoids redundant
+// overhead and guarantees the processor is only created once per module load.
+const processor = unified()
+  .use(remarkParse)
+  .use(remarkFrontmatter, ['yaml']);
+
 export class ParserHandler implements ParserSpec {
   execute(input: ParserInput): ParserResult {
     try {
       const { content } = input;
-      const processor = unified()
-        .use(remarkParse)
-        .use(remarkFrontmatter, ['yaml']);
-
       const ast = processor.parse(content) as Root;
       const blocks: Array<{ yaml: string; block: 'frontmatter' | number; startLine: number }> = [];
       const sections: string[] = [];
