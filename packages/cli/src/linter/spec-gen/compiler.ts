@@ -19,11 +19,19 @@ import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'mdast';
 
+// ⚡ Bolt Performance Optimization:
+// We instantiate the unified parser and stringifier processor pipelines once as module-level constants
+// instead of recreating them on every `compileMdx()` call. This avoids redundant overhead and
+// guarantees the processors are only created once per module load.
+const parserProcessor = unified()
+  .use(remarkParse)
+  .use(remarkMdx);
+
+const stringifyProcessor = unified()
+  .use(remarkStringify);
+
 export async function compileMdx(source: string, scope: Record<string, unknown>): Promise<string> {
-  const tree = unified()
-    .use(remarkParse)
-    .use(remarkMdx)
-    .parse(source) as Root;
+  const tree = parserProcessor.parse(source) as Root;
 
   // Evaluate MDX expression nodes and replace with text
   visit(tree, (node, index, parent) => {
@@ -52,9 +60,7 @@ export async function compileMdx(source: string, scope: Record<string, unknown>)
     }
   });
 
-  const file = unified()
-    .use(remarkStringify)
-    .stringify(tree);
+  const file = stringifyProcessor.stringify(tree);
 
   return String(file);
 }
