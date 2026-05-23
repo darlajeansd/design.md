@@ -19,18 +19,28 @@ import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'mdast';
 
+// ⚡ Bolt Performance Optimization:
+// Instantiate unified processor pipelines once to avoid redundant overhead on every compileMdx call.
+const parseProcessor = unified()
+  .use(remarkParse)
+  .use(remarkMdx);
+
+const stringifyProcessor = unified()
+  .use(remarkStringify);
+
 export async function compileMdx(source: string, scope: Record<string, unknown>): Promise<string> {
-  const tree = unified()
-    .use(remarkParse)
-    .use(remarkMdx)
-    .parse(source) as Root;
+  const tree = parseProcessor.parse(source) as Root;
+
+  // Extract keys and values once to avoid re-evaluating for every MDX node
+  const scopeKeys = Object.keys(scope);
+  const scopeValues = Object.values(scope);
 
   // Evaluate MDX expression nodes and replace with text
   visit(tree, (node, index, parent) => {
     if (node.type === 'mdxTextExpression' || node.type === 'mdxFlowExpression') {
       const expr = (node as any).value as string;
-      const fn = new Function(...Object.keys(scope), `return ${expr}`);
-      const result = String(fn(...Object.values(scope)));
+      const fn = new Function(...scopeKeys, `return ${expr}`);
+      const result = String(fn(...scopeValues));
 
       if (node.type === 'mdxTextExpression') {
         // Inline: replace with text node
@@ -52,9 +62,7 @@ export async function compileMdx(source: string, scope: Record<string, unknown>)
     }
   });
 
-  const file = unified()
-    .use(remarkStringify)
-    .stringify(tree);
+  const file = stringifyProcessor.stringify(tree);
 
   return String(file);
 }
