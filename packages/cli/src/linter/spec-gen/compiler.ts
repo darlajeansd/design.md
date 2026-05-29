@@ -19,11 +19,19 @@ import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'mdast';
 
+// ⚡ Bolt Performance Optimization:
+// Instantiate unified processor pipelines once at the module level.
+// This prevents recreating the plugin resolutions and internal state structures
+// on every compileMdx call, saving measurable CPU overhead during bulk processing.
+const parseProcessor = unified()
+  .use(remarkParse)
+  .use(remarkMdx);
+
+const stringifyProcessor = unified()
+  .use(remarkStringify);
+
 export async function compileMdx(source: string, scope: Record<string, unknown>): Promise<string> {
-  const tree = unified()
-    .use(remarkParse)
-    .use(remarkMdx)
-    .parse(source) as Root;
+  const tree = parseProcessor.parse(source) as Root;
 
   // Evaluate MDX expression nodes and replace with text
   visit(tree, (node, index, parent) => {
@@ -52,9 +60,7 @@ export async function compileMdx(source: string, scope: Record<string, unknown>)
     }
   });
 
-  const file = unified()
-    .use(remarkStringify)
-    .stringify(tree);
+  const file = stringifyProcessor.stringify(tree);
 
   return String(file);
 }
