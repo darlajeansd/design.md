@@ -80,9 +80,9 @@ export default defineConfig({
       );
 
       // Install dependencies in temp dir so they can be imported in config
-      // Using bun add should be fast if cached
+      // Using npm install as bun add may hang in child processes during tests
       const customPath = `${process.env.PATH || ''}:/Users/dalmaer/.bun/bin`;
-      const installProc = spawnSync('bun', ['add', '@terrazzo/cli', '@terrazzo/plugin-css'], {
+      const installProc = spawnSync('npm', ['install', '--no-progress', '--no-audit', '--no-fund', '@terrazzo/cli', '@terrazzo/plugin-css'], {
         cwd: tmpDir,
         env: { ...process.env, PATH: customPath },
         shell: true
