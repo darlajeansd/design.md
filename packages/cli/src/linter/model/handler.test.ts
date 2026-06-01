@@ -460,6 +460,7 @@ describe('ModelHandler', () => {
       expect(result.findings.filter(f => f.severity === 'error')).toHaveLength(0);
       const btn = result.designSystem.components.get('button-primary');
       expect(btn).toBeDefined();
+      // @ts-expect-error testing intentionally invalid input
       expect(btn?.properties.get('fontWeight')).toBe(600);
     });
 
@@ -472,6 +473,7 @@ describe('ModelHandler', () => {
         },
       }));
       const heading = result.designSystem.components.get('heading');
+      // @ts-expect-error testing intentionally invalid input
       expect(heading?.properties.get('fontWeight')).toBe(700);
     });
 
@@ -485,6 +487,7 @@ describe('ModelHandler', () => {
       }));
       expect(result.findings.filter(f => f.severity === 'error')).toHaveLength(0);
       const card = result.designSystem.components.get('card');
+      // @ts-expect-error testing intentionally invalid input
       expect(card?.properties.get('borderWidth')).toBe(1);
     });
 
@@ -503,6 +506,7 @@ describe('ModelHandler', () => {
       }));
       expect(result.findings.filter(f => f.severity === 'error')).toHaveLength(0);
       const btn = result.designSystem.components.get('button');
+      // @ts-expect-error testing intentionally invalid input
       expect(btn?.properties.get('fontWeight')).toBe(600);
     });
   });
