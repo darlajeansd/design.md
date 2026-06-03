@@ -1,0 +1,4 @@
+## 2024-06-03 - Arbitrary Code Execution (RCE) in MDX Compiler
+**Vulnerability:** The MDX compiler (`compileMdx` in `packages/cli/src/linter/spec-gen/compiler.ts`) used `new Function` to evaluate arbitrary string expressions from user-provided MDX files.
+**Learning:** Evaluating untrusted expressions with `new Function` inside a Node.js process gives attackers full arbitrary code execution context. Even if expressions are meant for simple substitutions, attackers can construct payloads that break out.
+**Prevention:** Avoid dynamic evaluation of strings as code whenever possible. If it must be done, use isolated contexts like `node:vm` (`vm.runInContext`) with a null-prototype context object to restrict access to Node globals and process objects. Wrap user expressions in parentheses `(${expr})` to avoid literal interpretation errors.
