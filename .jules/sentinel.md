@@ -1,0 +1,4 @@
+## 2025-06-05 - RCE via `new Function` in MDX Evaluator
+**Vulnerability:** Evaluated untrusted MDX variables/expressions using `new Function()` in `packages/cli/src/linter/spec-gen/compiler.ts`, which could lead to Remote Code Execution (RCE) via malicious input executing dynamically within the Node.js process.
+**Learning:** `new Function()` evaluates in the global scope. Using `node:vm` requires special handling to prevent prototype climbing. Without isolating scope boundaries, an attacker can traverse prototypes (e.g., `[].constructor.constructor("return process")().version`) to escape the context.
+**Prevention:** Instead of `new Function()`, use `vm.createContext(Object.create(null))` to run code securely. Non-functions in the scope must be parsed via `JSON.parse` *inside* the context to ensure they have the inner realm's prototype. Functions passed from the outer realm must be safely wrapped using an inner-realm function factory.

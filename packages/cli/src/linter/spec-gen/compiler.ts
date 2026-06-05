@@ -18,8 +18,25 @@ import remarkMdx from 'remark-mdx';
 import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'mdast';
+import vm from 'node:vm';
 
 export async function compileMdx(source: string, scope: Record<string, unknown>): Promise<string> {
+  const context = vm.createContext(Object.create(null));
+
+  const wrapperScript = "(function(extFn) { 'use strict'; return function() { return extFn.apply(null, arguments); }; })";
+  const wrapperMaker = vm.runInContext(wrapperScript, context);
+
+  for (const [k, v] of Object.entries(scope)) {
+    if (typeof v === 'function') {
+      context[k] = wrapperMaker(v);
+    } else if (v === undefined) {
+      context[k] = undefined;
+    } else {
+      context.__temp = JSON.stringify(v);
+      vm.runInContext(`var ${k} = __temp ? JSON.parse(__temp) : __temp;`, context);
+      context.__temp = undefined;
+    }
+  }
   const tree = unified()
     .use(remarkParse)
     .use(remarkMdx)
@@ -29,8 +46,7 @@ export async function compileMdx(source: string, scope: Record<string, unknown>)
   visit(tree, (node, index, parent) => {
     if (node.type === 'mdxTextExpression' || node.type === 'mdxFlowExpression') {
       const expr = (node as any).value as string;
-      const fn = new Function(...Object.keys(scope), `return ${expr}`);
-      const result = String(fn(...Object.values(scope)));
+      const result = String(vm.runInContext(expr, context));
 
       if (node.type === 'mdxTextExpression') {
         // Inline: replace with text node
