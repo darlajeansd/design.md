@@ -18,8 +18,22 @@ import remarkMdx from 'remark-mdx';
 import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'mdast';
+import vm from 'node:vm';
 
 export async function compileMdx(source: string, scope: Record<string, unknown>): Promise<string> {
+  // Secure context setup for node:vm
+  const context = vm.createContext(Object.create(null));
+  const innerJSONParse = vm.runInNewContext('JSON.parse');
+  const innerFunction = vm.runInNewContext('Function');
+
+  for (const [key, value] of Object.entries(scope)) {
+    if (typeof value === 'function') {
+      context[key] = innerFunction('fn', `return function(...args) { return fn(...args); }`)(value);
+    } else if (value !== undefined) {
+      context[key] = innerJSONParse(JSON.stringify(value));
+    }
+  }
+
   const tree = unified()
     .use(remarkParse)
     .use(remarkMdx)
@@ -29,8 +43,7 @@ export async function compileMdx(source: string, scope: Record<string, unknown>)
   visit(tree, (node, index, parent) => {
     if (node.type === 'mdxTextExpression' || node.type === 'mdxFlowExpression') {
       const expr = (node as any).value as string;
-      const fn = new Function(...Object.keys(scope), `return ${expr}`);
-      const result = String(fn(...Object.values(scope)));
+      const result = String(vm.runInContext(expr, context));
 
       if (node.type === 'mdxTextExpression') {
         // Inline: replace with text node
