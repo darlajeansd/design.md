@@ -1,0 +1,5 @@
+
+## 2026-06-12 - Fix arbitrary code execution vulnerability in MDX compilation
+**Vulnerability:** The MDX compilation script (`compileMdx`) used `new Function` to evaluate inline and block MDX expressions. This evaluates code in the global scope and allows unrestricted access to the runtime environment, making it a critical risk for arbitrary code execution if user inputs are parsed.
+**Learning:** `node:vm` offers basic isolation compared to `new Function`, but using it for a completely secure sandbox is an anti-pattern. However, `vm.runInNewContext` is significantly safer than `new Function` because it runs the code in an isolated scope, mitigating immediate arbitrary code execution risks without adding external dependencies (though for fully untrusted code, an AST-based evaluator or a hardened sandbox like `isolated-vm` should be used).
+**Prevention:** Avoid using `eval` or `new Function` to execute dynamically generated code strings. Use isolated contexts like `vm.runInNewContext` to safely pass scoped variables when lightweight isolation is acceptable.
