@@ -1,0 +1,4 @@
+## 2024-05-18 - MDX Code Injection Fix
+**Vulnerability:** MDX files processed by `compileMdx` allowed executing arbitrary code in the main application context through string concatenation into `new Function`.
+**Learning:** `new Function` with dynamic string input from parsed sources constitutes a code injection vulnerability, allowing privilege escalation out of the intended parsing pipeline. While `node:vm` isn't a perfect secure sandbox for highly untrusted hostile code, it is significantly better than `new Function` for isolating template variable evaluation.
+**Prevention:** Avoid `new Function` and `eval()`. Use `node:vm` to isolate execution contexts appropriately when dynamic evaluation of markdown expressions is required, making sure to avoid direct access to the global application context.
