@@ -17,6 +17,7 @@ import remarkParse from 'remark-parse';
 import remarkMdx from 'remark-mdx';
 import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
+import * as vm from 'node:vm';
 import type { Root } from 'mdast';
 
 export async function compileMdx(source: string, scope: Record<string, unknown>): Promise<string> {
@@ -29,8 +30,8 @@ export async function compileMdx(source: string, scope: Record<string, unknown>)
   visit(tree, (node, index, parent) => {
     if (node.type === 'mdxTextExpression' || node.type === 'mdxFlowExpression') {
       const expr = (node as any).value as string;
-      const fn = new Function(...Object.keys(scope), `return ${expr}`);
-      const result = String(fn(...Object.values(scope)));
+      const script = new vm.Script(`(${expr})`);
+      const result = String(script.runInNewContext({ ...scope }));
 
       if (node.type === 'mdxTextExpression') {
         // Inline: replace with text node
