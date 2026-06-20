@@ -1,3 +1,5 @@
-## 2024-05-17 - Unified AST Parser Re-instantiation Overhead
-**Learning:** Instantiating the `unified().use(...)` pipeline for `remarkParse` and `remarkFrontmatter` on every function call introduces measurable CPU overhead when parsing many files, because plugin resolution and internal state structures are rebuilt each time. The `.parse()` method is stateless relative to the configuration.
-**Action:** Always extract `unified` processor pipelines to module-level constants or static properties and reuse them across parses to maximize throughput.
+## 2024-05-24 - Unified Pipeline Performance
+
+**Learning:** When using `unified` and `remark` for parsing markdown, instantiating the pipeline `unified().use(...)` repeatedly per-compilation is surprisingly slow. `unified` does a lot of plugin resolution and setup work.
+
+**Action:** Always extract the instantiated processor pipeline to a module-level constant or class property and call `.parse()` or `.stringify()` on the cached pipeline.
