@@ -1,0 +1,4 @@
+## 2025-02-27 - Code Injection in MDX Compilation
+**Vulnerability:** Use of `new Function(...Object.keys(scope), \`return \${expr}\`)` to evaluate user-provided MDX expressions, leading to code injection as `expr` is evaluated directly in the function body.
+**Learning:** This is an easily escapable anti-pattern that provides no isolation for code execution. Evaluating arbitrary expressions without a proper sandbox leads to severe security risks.
+**Prevention:** Instead of `new Function`, use Node.js's `node:vm` module (specifically `runInNewContext`). Wrap expressions in parentheses `(\${expr})` to avoid issues with object literals being parsed as block statements, and pass a shallow copy of the scope object (`{ ...scope }`) to prevent state leakage. Note that while `node:vm` provides better isolation than `new Function`, it is still not a true secure sandbox.
