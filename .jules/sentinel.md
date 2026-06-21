@@ -1,0 +1,4 @@
+## 2025-02-20 - [HIGH] Arbitrary code execution via new Function in MDX compilation
+**Vulnerability:** The MDX expression compiler used `new Function('...', 'return ' + expr)` to dynamically evaluate markdown expressions. This functions equivalently to `eval()`, posing a high code injection risk if untrusted content makes its way into the parser.
+**Learning:** Evaluators like `new Function` directly execute code in the application's global scope, making it trivial to execute arbitrary functions.
+**Prevention:** Replaced with `node:vm` `runInNewContext` wrapping the expression in parentheses and passing a shallow copy of the scope object. Although `node:vm` is not a secure boundary against determined attacks, it prevents accidental leakage and direct execution in the current context compared to `new Function()`.
