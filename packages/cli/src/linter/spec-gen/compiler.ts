@@ -18,6 +18,7 @@ import remarkMdx from 'remark-mdx';
 import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'mdast';
+import * as vm from 'node:vm';
 
 export async function compileMdx(source: string, scope: Record<string, unknown>): Promise<string> {
   const tree = unified()
@@ -25,12 +26,16 @@ export async function compileMdx(source: string, scope: Record<string, unknown>)
     .use(remarkMdx)
     .parse(source) as Root;
 
+  // Create a single VM context for performance
+  const context = vm.createContext({ ...scope });
+
   // Evaluate MDX expression nodes and replace with text
   visit(tree, (node, index, parent) => {
     if (node.type === 'mdxTextExpression' || node.type === 'mdxFlowExpression') {
       const expr = (node as any).value as string;
-      const fn = new Function(...Object.keys(scope), `return ${expr}`);
-      const result = String(fn(...Object.values(scope)));
+      // Using node:vm provides basic isolation over new Function, though it is not a secure sandbox
+      // Wrap in IIFE to handle empty expressions or comments safely
+      const result = String(vm.runInContext(`(function() { return ${expr}; })()`, context));
 
       if (node.type === 'mdxTextExpression') {
         // Inline: replace with text node
