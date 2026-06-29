@@ -18,6 +18,7 @@ import remarkMdx from 'remark-mdx';
 import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'mdast';
+import { safeEvaluate } from './evaluate.js';
 
 export async function compileMdx(source: string, scope: Record<string, unknown>): Promise<string> {
   const tree = unified()
@@ -29,8 +30,8 @@ export async function compileMdx(source: string, scope: Record<string, unknown>)
   visit(tree, (node, index, parent) => {
     if (node.type === 'mdxTextExpression' || node.type === 'mdxFlowExpression') {
       const expr = (node as any).value as string;
-      const fn = new Function(...Object.keys(scope), `return ${expr}`);
-      const result = String(fn(...Object.values(scope)));
+      // Mitigate code execution risks by using an AST-based evaluator
+      const result = String(safeEvaluate(expr, scope));
 
       if (node.type === 'mdxTextExpression') {
         // Inline: replace with text node

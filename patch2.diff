@@ -1,0 +1,23 @@
+<<<<<<< SEARCH
+      if (node.type === 'MemberExpression') {
+        const obj = walk(node.object, currentScope);
+        const prop = node.computed ? walk(node.property, currentScope) : node.property.name;
+        if (obj === undefined || obj === null) throw new Error("Cannot read property of null/undefined");
+        const val = obj[prop];
+        if (typeof val === 'function') {
+            return val.bind(obj);
+        }
+        return val;
+      }
+=======
+      if (node.type === 'MemberExpression') {
+        const obj = walk(node.object, currentScope);
+        const prop = node.computed ? walk(node.property, currentScope) : node.property.name;
+        if (obj === undefined || obj === null) throw new Error("Cannot read property of null/undefined");
+        const val = obj[prop];
+        if (typeof val === 'function') {
+            return val.bind(obj);
+        }
+        return val;
+      }
+>>>>>>> REPLACE

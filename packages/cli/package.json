@@ -47,6 +47,7 @@
   "dependencies": {
     "@json-render/core": "^0.16.0",
     "@json-render/ink": "^0.16.0",
+    "acorn": "^8.17.0",
     "citty": "^0.1.6",
     "ink": "^7.0.0",
     "mdast": "^3.0.0",
