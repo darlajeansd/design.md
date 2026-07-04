@@ -1,0 +1,4 @@
+## 2024-07-04 - Code Execution Vulnerability in MDX Compiler
+**Vulnerability:** MDX expressions were being evaluated directly using `new Function()`, which is equivalent to `eval()` and presents a code injection risk if untrusted MDX content is compiled.
+**Learning:** `new Function()` allows arbitrary javascript code execution within the node.js process. Replacing it with `node:vm` (`vm.runInContext`) provides basic isolation, evaluating the expression as an IIFE rather than arbitrary code execution on the global process. However, it is important to remember that `node:vm` is not a secure sandbox and can be escaped if untrusted code is executed.
+**Prevention:** Avoid `eval()` and `new Function()` with dynamic strings. For evaluation of user-provided content, use AST-based evaluators, safer sandbox solutions like `isolated-vm` when untrusted, and `node:vm` to limit accidental process leakage.
